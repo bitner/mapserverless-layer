@@ -26,4 +26,4 @@ rsync -ax $PREFIX/bin/mapserv $DEPLOY_DIR/bin/
 
 # zip up deploy package
 cd $DEPLOY_DIR
-zip -ruq ../lambda-deploy.zip ./
+zip --symlinks -ruq ../lambda-deploy.zip ./
