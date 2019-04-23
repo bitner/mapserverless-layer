@@ -33,7 +33,7 @@ ENV \
     NPROC=4 \
 	PREFIX=/usr/local \
 	GDAL_CONFIG=/usr/local/bin/gdal-config \
-	LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64 \
+	LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:/usr/local/lib/postgresql \
     GDAL_DATA=/usr/local/share/gdal
 
 # switch to a build directory
@@ -153,22 +153,70 @@ RUN \
     make -j ${NPROC} install; \
     cd ${BUILD}; rm -rf gdal
 
+# Protobufc
+Run \
+    mkdir protobuf; \
+    wget -qO- https://github.com/google/protobuf/archive/v3.0.2.tar.gz \
+    | tar xvz -C protobuf --strip-components=1; \
+    cd protobuf; \
+    ./autogen.sh; \
+    ./configure;  \
+    make -j ${NPROC} install; \
+    cd ${BUILD}; rm -rf protobuf
 
-# mapserver
+# Protobufc
+Run \
+    mkdir protobufc; \
+    wget -qO- https://github.com/protobuf-c/protobuf-c/releases/download/v1.2.1/protobuf-c-1.2.1.tar.gz \
+    | tar xvz -C protobufc --strip-components=1; \
+    cd protobufc; \
+    ./configure;  \
+    make -j ${NPROC} install; \
+    cd ${BUILD}; rm -rf protobufc
+
+# #postgresql
+RUN \
+    mkdir postgresql; \
+    wget -qO- https://ftp.postgresql.org/pub/source/v11.2/postgresql-11.2.tar.gz \
+        | tar xvz -C postgresql --strip-components=1; \
+    cd postgresql;   \
+    ./configure  --with-openssl --prefix=$PREFIX; \
+    make -j ${NPROC} install; \
+    cd ${BUILD}; rm -rf postgresql
+
+#postgis
+RUN \
+    mkdir postgis; \
+    wget -qO- https://download.osgeo.org/postgis/source/postgis-2.5.2.tar.gz \
+        | tar xvz -C postgis --strip-components=1; \
+    cd postgis; \
+    ./configure --prefix=$PREFIX; \
+    make -j ${NPROC} install; \
+    cd ${BUILD}; rm -rf postgis
+
+# # mapserver
 RUN \
     mkdir mapserver; \
     wget -qO- http://download.osgeo.org/mapserver/mapserver-${MAPSERVER_VERSION}.tar.gz \
         | tar xvz -C mapserver --strip-components=1; cd mapserver; mkdir build; cd build; \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$PREFIX \
-            -DWITH_PROTOBUFC=0 \
+            -DLINK_STATIC_MAPSERVER=1 \
+            -DBUILD_STATIC=1 \
+            -DWITH_PROTOBUFC=1 \
             -DWITH_FRIBIDI=0 \
             -DWITH_HARFBUZZ=0 \
             -DWITH_FCGI=0 \
-            -DWITH_POSTGIS=0 \
-            -DWITH_GIF=0; \
+            -DWITH_POSTGIS=1 \
+            -DWITH_GIF=0 \
+            -DWITH_CURL=1 \
+            -DWITH_PYTHON=0 \
+            -DWITH_GDAL=1; \
     make -j ${NPROC} install; \
     cd ../..; rm -rf mapserver
+
+
+
 # 
 # Copy shell scripts and config files over
 COPY bin/* /usr/local/bin/
